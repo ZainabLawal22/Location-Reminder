@@ -12,6 +12,7 @@ import androidx.lifecycle.Observer
 import com.firebase.ui.auth.AuthUI
 import com.firebase.ui.auth.ErrorCodes
 import com.firebase.ui.auth.IdpResponse
+import com.google.firebase.auth.FirebaseAuth
 import com.udacity.project4.R
 import com.udacity.project4.databinding.ActivityAuthenticationBinding
 import com.udacity.project4.locationreminders.RemindersActivity
@@ -35,6 +36,14 @@ class AuthenticationActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityAuthenticationBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
+
+
+        if (FirebaseAuth.getInstance().currentUser != null) {
+
+            startRemindersActivity()
+            return
+        }
 
         // Registering the ActivityResultLauncher to handle sign-in result
         signInLauncher = registerForActivityResult(

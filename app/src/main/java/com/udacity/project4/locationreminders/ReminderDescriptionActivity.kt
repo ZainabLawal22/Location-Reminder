@@ -27,13 +27,6 @@ class ReminderDescriptionActivity : AppCompatActivity() {
         }
     }
 
-//    override fun onCreate(savedInstanceState: Bundle?) {
-//        super.onCreate(savedInstanceState)
-//        val layoutId = R.layout.activity_reminder_description
-//        binding = DataBindingUtil.setContentView(this, layoutId)
-//        // TODO: Add the implementation of the reminder details
-//    }
-
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
