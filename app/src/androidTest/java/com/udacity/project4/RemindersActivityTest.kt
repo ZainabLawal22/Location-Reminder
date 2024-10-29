@@ -107,17 +107,17 @@ class RemindersActivityTest :
 
         repository.saveReminder(
             ReminderDTO(
-                "Do not forget to eat",
-                "Enjoy the Fancy restaurants",
-                "Everywhere",
+                "sleeping",
+                "Enjoy sleeping because it relaxes my brain",
+                "Anywhere",
                 0.0,
                 0.0
             )
         )
-        Espresso.onView(ViewMatchers.withText("Remember to breathe")).check(
+        Espresso.onView(ViewMatchers.withText("Remember to sleep")).check(
             ViewAssertions.matches(
                 ViewMatchers.isDisplayed()))
-        Espresso.onView(ViewMatchers.withText("Suck the invisible space gas into your breath pouches")).check(
+        Espresso.onView(ViewMatchers.withText("Brush your mouth to get fresh breath")).check(
             ViewAssertions.matches(ViewMatchers.isDisplayed()))
         activityScenario.close()
     }

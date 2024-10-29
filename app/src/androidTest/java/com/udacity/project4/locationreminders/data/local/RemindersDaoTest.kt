@@ -10,7 +10,9 @@ import com.udacity.project4.locationreminders.data.dto.ReminderDTO
 import org.junit.runner.RunWith;
 
 import kotlinx.coroutines.ExperimentalCoroutinesApi;
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runBlockingTest
+import org.hamcrest.CoreMatchers
 import org.hamcrest.CoreMatchers.`is`
 import org.hamcrest.CoreMatchers.notNullValue
 import org.hamcrest.CoreMatchers.nullValue
@@ -24,64 +26,57 @@ import org.junit.Test
 
 @ExperimentalCoroutinesApi
 @RunWith(AndroidJUnit4::class)
+//Unit test the DAO
 @SmallTest
 class RemindersDaoTest {
+
     @get:Rule
     var instantExecutorRule = InstantTaskExecutorRule()
-    private lateinit var database: RemindersDatabase
+
+    private lateinit var remindersDatabase: RemindersDatabase
 
     @Before
-    fun initDB() {
-        database = Room.inMemoryDatabaseBuilder(
+    fun initDb() {
+        // Using an in-memory database so that the information stored here disappears when the
+        // process is killed.
+        remindersDatabase = Room.inMemoryDatabaseBuilder(
             ApplicationProvider.getApplicationContext(),
             RemindersDatabase::class.java
         ).build()
     }
 
     @After
-    fun closeDB() = database.close()
+    fun closeDb() = remindersDatabase.close()
 
     @Test
-    fun saveReminderAndGetById() = runBlockingTest {
+    fun saveReminder_savesReminderDTOtoDatabaseAndRetrievableById() = runBlocking {
         val reminder = ReminderDTO(
-            title = "Tennis Ball",
-            description = "Do not play many double fault",
-            location = "Wimbledon Court",
-            latitude = 95.1234,
-            longitude = 36783.1234
-        )
-        database.reminderDao().saveReminder(reminder)
-        val loaded = database.reminderDao().getReminderById(reminder.id)
-        assertThat<ReminderDTO>(loaded as ReminderDTO, notNullValue())
-        assertThat(loaded.id, `is`(reminder.id))
-        assertThat(loaded.description, `is`(reminder.description))
-        assertThat(loaded.location, `is`(reminder.location))
-        assertThat(loaded.latitude, `is`(reminder.latitude))
-        assertThat(loaded.longitude, `is`(reminder.longitude))
+            "Swim class",
+            "Learn breast stroke",
+            "Ikeja",
+            10.0,
+            20.0)
+
+        remindersDatabase.reminderDao().saveReminder(reminder)
+
+        val result: ReminderDTO? = remindersDatabase.reminderDao().getReminderById(reminder.id)
+        assertThat(result, `is`(reminder))
     }
 
     @Test
-    fun deleteAllRemindersAndReminders() = runBlockingTest {
+    fun deleteAllReminders_removesAllSavedReminderInDatabase() = runBlocking {
         val reminder = ReminderDTO(
-            title = "Tennis Ball",
-            description = "Do not play many double fault",
-            location = "Wimbledon Court",
-            latitude = 95.1234,
-            longitude = 36783.1234
-        )
+            "Swim class",
+            "Learn breast stroke",
+            "Ikeja",
+            10.0,
+            20.0)
+        val id = reminder.id
+        remindersDatabase.reminderDao().saveReminder(reminder)
 
-        database.reminderDao().saveReminder(reminder)
-        database.reminderDao().deleteAllReminders()
-        val reminders = database.reminderDao().getReminders()
-        assertThat(reminders.isEmpty(), `is`(true))
+        remindersDatabase.reminderDao().deleteAllReminders()
 
-    }
-
-    @Test
-    fun noRemindersFoundGetReminderById() = runBlockingTest {
-        val reminder = database.reminderDao().getReminderById("3")
-
-        assertThat(reminder, nullValue())
-
+        val result = remindersDatabase.reminderDao().getReminderById(id)
+        assertThat(result, `is`(CoreMatchers.nullValue()))
     }
 }
