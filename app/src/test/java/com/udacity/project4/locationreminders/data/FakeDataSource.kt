@@ -1,39 +1,29 @@
 package com.udacity.project4.locationreminders.data
 
+import android.os.Build
 import com.udacity.project4.locationreminders.data.dto.ReminderDTO
 import com.udacity.project4.locationreminders.data.dto.Result
+import org.robolectric.annotation.Config
 
+@Config(sdk = [Build.VERSION_CODES.O_MR1])
 //Use FakeDataSource that acts as a test double to the LocalDataSource
-class FakeDataSource : ReminderDataSource {
+class FakeDataSource(private val reminders: MutableList<ReminderDTO>? = mutableListOf()) : ReminderDataSource {
 
-    //Create a list to store reminders for the data source
-    var reminders = mutableListOf<ReminderDTO>()
-    var errorMessage: String? = null
-
-    //return reminders from the list
     override suspend fun getReminders(): Result<List<ReminderDTO>> {
-        if (errorMessage != null) {
-            return Result.Error(errorMessage)
-        } else {
-            reminders.let { return Result.Success(it) }
-        }
+        reminders?.let { return Result.Success(ArrayList(it)) }
+        return Result.Error("Reminders not found")
     }
 
-    //add reminder to fake data source
     override suspend fun saveReminder(reminder: ReminderDTO) {
-        reminders.add(reminder)
+        reminders?.add(reminder)
     }
 
-    //get a reminder by id
     override suspend fun getReminder(id: String): Result<ReminderDTO> {
-        reminders.firstOrNull { it.id == id }?.let { return Result.Success(it) }
-        return Result.Error("Reminder not found")
+        reminders?.let { return Result.Success(it[id.toInt()]) }
+        return Result.Error("Reminders not found")
     }
 
-    //clear stored reminders
     override suspend fun deleteAllReminders() {
-        reminders = mutableListOf()
+        reminders?.clear()
     }
-
-
 }

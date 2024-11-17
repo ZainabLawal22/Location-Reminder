@@ -33,32 +33,19 @@ class SaveReminderViewModel(val app: Application, val dataSource: ReminderDataSo
         longitude.value = null
     }
 
+
+
     /**
      * Validate the entered data then saves the reminder data to the DataSource
      */
-//    fun validateAndSaveReminder(reminderData: ReminderDataItem): ReminderDTO {
-//      return  if (validateEnteredData(reminderData)) {
-//            saveReminder(reminderData)
-//        }
-//    }
-
-    fun validateAndSaveReminder(reminderData: ReminderDataItem): ReminderDTO? {
-        return if (validateEnteredData(reminderData)) {
-            // Save the reminder and return the DTO
+    fun validateAndSaveReminder(reminderData: ReminderDataItem): Boolean {
+        val result = validateEnteredData(reminderData)
+        if (validateEnteredData(reminderData)) {
             saveReminder(reminderData)
-            ReminderDTO(
-                id = reminderData.id,
-                title = reminderData.title,
-                description = reminderData.description,
-                location = reminderData.location,
-                latitude = reminderData.latitude,
-                longitude = reminderData.longitude
-            )
-        } else {
-            // Return null if validation fails
-            null
         }
+        return result
     }
+
 
 
     /**

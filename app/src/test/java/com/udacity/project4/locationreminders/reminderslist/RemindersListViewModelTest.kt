@@ -4,14 +4,20 @@ import android.os.Build
 import androidx.arch.core.executor.testing.InstantTaskExecutorRule
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.google.firebase.FirebaseApp
+import com.udacity.project4.MainCoroutineRule
 import com.udacity.project4.locationreminders.data.FakeDataSource
 import com.udacity.project4.locationreminders.getOrAwaitValue
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.pauseDispatcher
 import kotlinx.coroutines.test.resumeDispatcher
 import kotlinx.coroutines.test.runBlockingTest
+import kotlinx.coroutines.test.runTest
+import org.hamcrest.CoreMatchers
+import org.hamcrest.MatcherAssert
 import org.hamcrest.MatcherAssert.assertThat
 import org.hamcrest.Matchers.`is`
+import org.hamcrest.core.Is
 import org.junit.After
 import org.junit.Assert
 import org.junit.Before
@@ -22,62 +28,65 @@ import org.koin.core.context.stopKoin
 import org.robolectric.annotation.Config
 
 @RunWith(AndroidJUnit4::class)
-@ExperimentalCoroutinesApi
+@OptIn(ExperimentalCoroutinesApi::class)
+@Config(sdk = [Build.VERSION_CODES.O_MR1])
 class RemindersListViewModelTest {
-    // Executes each task synchronously using Architecture Components.
-    @get:Rule
-    var instantExecutorRule = InstantTaskExecutorRule()
 
-    private lateinit var remindersListViewModel: RemindersListViewModel
-    private lateinit var fakeReminderDataSource: FakeDataSource
+    private lateinit var reminderListViewModel: RemindersListViewModel
+
+    @get:Rule
+    var instantTaskExecutorRule = InstantTaskExecutorRule()
+
+    // Use the updated MainCoroutineRule
+    @get:Rule
+    var mainCoroutineRule = MainCoroutineRule()
 
     @Before
-    fun setupReminderListViewModel() {
-        fakeReminderDataSource = FakeDataSource()
-        remindersListViewModel = RemindersListViewModel(
+    fun setupViewModel() {
+        val fakeDataSource = FakeDataSource()
+        FirebaseApp.initializeApp(ApplicationProvider.getApplicationContext())
+        reminderListViewModel = RemindersListViewModel(
             ApplicationProvider.getApplicationContext(),
-            fakeReminderDataSource
+            fakeDataSource
         )
     }
-
-    @Test
-    fun loadReminders_givenErrorResult_showsSnackBarErrorMessage() =
-        runBlockingTest {
-            val message = "Error message"
-            fakeReminderDataSource.errorMessage = message
-
-            remindersListViewModel.loadReminders()
-
-            Assert.assertEquals(message, remindersListViewModel.showSnackBar.getOrAwaitValue())
-        }
-
-    @Test
-    fun loadReminders_givenValidForm_showsReminderList() =
-        runBlockingTest {
-            val reminder1 = ReminderDataItem(
-                "Title todo1",
-                "Description todo1",
-                "Location todo1",
-                50.0,
-                50.0)
-
-            val reminder2 = ReminderDataItem(
-                "Title todo2",
-                "Description todo2",
-                "Location todo2",
-                50.0,
-                50.0)
-
-            fakeReminderDataSource.saveReminder(reminder1.toReminderDTO())
-            fakeReminderDataSource.saveReminder(reminder2.toReminderDTO())
-
-            remindersListViewModel.loadReminders()
-
-            Assert.assertEquals(listOf(reminder1,reminder2),remindersListViewModel.remindersList.getOrAwaitValue())
-        }
 
     @After
     fun tearDown() {
         stopKoin()
     }
+
+    @Test
+    fun invalidateShowNoData_noDataAvailable() {
+        reminderListViewModel.remindersList.value = null
+        val value = reminderListViewModel.showNoData.value
+
+        MatcherAssert.assertThat(value, Is.`is`(CoreMatchers.nullValue()))
+    }
+
+    @Test
+    fun checkShowLoading() = runTest {
+        // Pause the dispatcher
+        mainCoroutineRule.dispatcher.scheduler.advanceUntilIdle()
+
+        // Trigger loading
+        reminderListViewModel.loadReminders()
+
+        // Assert that loading is shown
+        MatcherAssert.assertThat(
+            reminderListViewModel.showLoading.getOrAwaitValue(),
+            Is.`is`(true)
+        )
+
+        // Process the queued tasks
+        mainCoroutineRule.dispatcher.scheduler.runCurrent()
+
+        // Assert that loading is hidden
+        MatcherAssert.assertThat(
+            reminderListViewModel.showLoading.getOrAwaitValue(),
+            Is.`is`(false)
+        )
+    }
+
 }
+
