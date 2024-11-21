@@ -5,7 +5,9 @@ import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.filters.SmallTest;
+import com.udacity.project4.BaseTest
 import com.udacity.project4.locationreminders.data.dto.ReminderDTO
+import com.udacity.project4.util.ReminderUtils
 
 import org.junit.runner.RunWith;
 
@@ -14,6 +16,7 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runBlockingTest
 import org.hamcrest.CoreMatchers
 import org.hamcrest.CoreMatchers.`is`
+import org.hamcrest.CoreMatchers.not
 import org.hamcrest.CoreMatchers.notNullValue
 import org.hamcrest.CoreMatchers.nullValue
 import org.hamcrest.MatcherAssert.assertThat
@@ -21,134 +24,96 @@ import org.junit.After
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
-
+import org.koin.core.qualifier.named
+import org.koin.test.inject
 
 
 @ExperimentalCoroutinesApi
 @RunWith(AndroidJUnit4::class)
 //Unit test the DAO
 @SmallTest
-class RemindersDaoTest {
+class RemindersDaoTest : BaseTest {
 
-    private lateinit var database: RemindersDatabase
+    private val remindersDao: RemindersDao by inject(named("dao"))
 
-    // Executes each task synchronously using Architecture Components.
     @get:Rule
-    var instantExecutorRule = InstantTaskExecutorRule()
-
-    @Before
-    fun initDb() {
-        // using an in-memory database because the information stored here disappears when the
-        // process is killed
-        database = Room.inMemoryDatabaseBuilder(
-            ApplicationProvider.getApplicationContext(),
-            RemindersDatabase::class.java
-        ).build()
-    }
-
-    @After
-    fun closeDb() = database.close()
+    val instantExecutorRule = InstantTaskExecutorRule()
 
     @Test
-    fun saveReminderAndGetReminderById() = runBlocking {
-        // GIVEN - insert a reminder
-        val reminderDTO = ReminderDTO(
-            description = "Test 1 description",
-            title = "Test 1 title",
-            latitude = 30.0,
-            location = "Test 1 location",
-            longitude = 40.0
-        )
-        database.reminderDao().saveReminder(reminderDTO)
+    fun saveReminderAndGetById() = runBlocking {
+        val reminder = ReminderUtils.MOCK_REMINDER_DTO
+        remindersDao.saveReminder(reminder)
 
-        // WHEN - Get the reminder by id from the database
-        val loaded = database.reminderDao().getReminderById(reminderDTO.id)
-
-        // THEN - The loaded data contains the expected values
+        val loaded = remindersDao.getReminderById(reminder.id)
         assertThat<ReminderDTO>(loaded as ReminderDTO, notNullValue())
-        assertThat(loaded.id, `is`(reminderDTO.id))
-        assertThat(loaded.title, `is`(reminderDTO.title))
-        assertThat(loaded.description, `is`(reminderDTO.description))
-        assertThat(loaded.location, `is`(reminderDTO.location))
-        assertThat(loaded.latitude, `is`(reminderDTO.latitude))
-        assertThat(loaded.longitude, `is`(reminderDTO.longitude))
+        assertThat(loaded.id, `is`(reminder.id))
+        assertThat(loaded.title, `is`(reminder.title))
+        assertThat(loaded.description, `is`(reminder.description))
+        assertThat(loaded.location, `is`(reminder.location))
+        assertThat(loaded.latitude, `is`(reminder.latitude))
+        assertThat(loaded.longitude, `is`(reminder.longitude))
+        assertThat(loaded.deleteFlag, `is`(reminder.deleteFlag))
+        assertThat(loaded.requestCode, `is`(reminder.requestCode))
     }
 
     @Test
-    fun saveRemindersAndGetAllReminders() = runBlocking {
+    fun saveReminderAndGetReminders() = runBlocking {
+        val reminder = ReminderUtils.MOCK_REMINDER_DTO
+        remindersDao.saveReminder(reminder)
 
-        // GIVEN - insert reminders
-        val reminder1 = ReminderDTO(
-            description = "Test 1 description",
-            title = "Test 1 title",
-            latitude = 30.0,
-            location = "Test 1 location",
-            longitude = 40.0
-        )
-        val reminder2 = ReminderDTO(
-            description = "Test 2 description",
-            title = "Test 2 title",
-            latitude = 22.0,
-            location = "Test 2 location",
-            longitude = 33.0
-        )
-        database.reminderDao().saveReminder(reminder1)
-        database.reminderDao().saveReminder(reminder2)
-
-        // WHEN - Get the reminders from the database
-        val loaded = database.reminderDao().getReminders()
-
-        // THEN - The loaded data contains the expected values
-        assertThat(loaded, notNullValue())
-
-        assertThat(loaded[0].id, `is`(reminder1.id))
-        assertThat(loaded[0].title, `is`(reminder1.title))
-        assertThat(loaded[0].description, `is`(reminder1.description))
-        assertThat(loaded[0].location, `is`(reminder1.location))
-        assertThat(loaded[0].latitude, `is`(reminder1.latitude))
-        assertThat(loaded[0].longitude, `is`(reminder1.longitude))
-
-        assertThat(loaded[1].id, `is`(reminder2.id))
-        assertThat(loaded[1].title, `is`(reminder2.title))
-        assertThat(loaded[1].description, `is`(reminder2.description))
-        assertThat(loaded[1].location, `is`(reminder2.location))
-        assertThat(loaded[1].latitude, `is`(reminder2.latitude))
-        assertThat(loaded[1].longitude, `is`(reminder2.longitude))
+        val loaded = remindersDao.getReminders()
+        assertThat<List<ReminderDTO>>(loaded, notNullValue())
+        assertThat(loaded.isEmpty(), not(true))
     }
 
     @Test
-    fun saveReminders_andDeleteAllReminders() = runBlocking {
-        // GIVEN - insert reminders
-        val reminder1 = ReminderDTO(
-            description = "Test 1 description",
-            title = "Test 1 title",
-            latitude = 30.0,
-            location = "Test 1 location",
-            longitude = 40.0
-        )
-        val reminder2 = ReminderDTO(
-            description = "Test 2 description",
-            title = "Test 2 title",
-            latitude = 22.0,
-            location = "Test 2 location",
-            longitude = 33.0
-        )
-        database.reminderDao().saveReminder(reminder1)
-        database.reminderDao().saveReminder(reminder2)
-
-        //get reminders
-        var loaded = database.reminderDao().getReminders()
-        assertThat(loaded, notNullValue())
-
-        //delete reminders
-        database.reminderDao().deleteAllReminders()
-
-        // WHEN - get all from database
-        loaded = database.reminderDao().getReminders()
-
-        // THEN - The loaded data contains the expected values
-        assertThat(loaded, `is`(emptyList()))
-
+    fun getRemindersWithoutData() = runBlocking {
+        val loaded = remindersDao.getReminders()
+        assertThat<List<ReminderDTO>>(loaded, notNullValue())
+        assertThat(loaded.isEmpty(), `is`(true))
     }
 
+    @Test
+    fun deleteAllReminders() = runBlocking {
+        val reminder = ReminderUtils.MOCK_REMINDER_DTO
+        remindersDao.saveReminder(reminder)
+
+        var loaded = remindersDao.getReminders()
+        assertThat<List<ReminderDTO>>(loaded, notNullValue())
+        assertThat(loaded.isEmpty(), not(true))
+
+        remindersDao.deleteAllReminders()
+        loaded = remindersDao.getReminders()
+        assertThat<List<ReminderDTO>>(loaded, notNullValue())
+        assertThat(loaded.isEmpty(), `is`(true))
+    }
+
+    @Test
+    fun deleteReminders() = runBlocking {
+        val reminder = ReminderUtils.MOCK_REMINDER_DTO
+        remindersDao.saveReminder(reminder)
+
+        var loaded = remindersDao.getReminderById(reminder.id)
+        assertThat<ReminderDTO>(loaded as ReminderDTO, notNullValue())
+
+        remindersDao.deleteReminders(listOf(reminder.id))
+        loaded = remindersDao.getReminderById(reminder.id)
+        assertThat(loaded, nullValue())
+    }
+
+    @Test
+    fun getLastRequestCode_withData() = runBlocking {
+        val reminder = ReminderUtils.MOCK_REMINDER_DTO
+        remindersDao.saveReminder(reminder)
+
+        val data = remindersDao.getReminders().last()
+        val code = remindersDao.getLastRequestCode()
+        assertThat(code, `is`(data.requestCode))
+    }
+
+    @Test
+    fun getLastRequestCode_noData() = runBlocking {
+        val code = remindersDao.getLastRequestCode()
+        assertThat(code, `is`(nullValue()))
+    }
 }

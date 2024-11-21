@@ -110,4 +110,9 @@ dependencies {
     // Firebase
     implementation "com.firebaseui:firebase-ui-auth:$firebaseUiAuthVersion"
     implementation "com.google.firebase:firebase-auth-ktx:$firebaseAuthKtxVersion"
+
+    // koin Testing
+    androidTestImplementation('io.insert-koin:koin-test:2.2.2') { exclude group: 'org.mockito' }
+    testImplementation('io.insert-koin:koin-test:2.2.2') { exclude group: 'org.mockito' }
+
 }

@@ -2,91 +2,111 @@ package com.udacity.project4.locationreminders.reminderslist
 
 import android.os.Build
 import androidx.arch.core.executor.testing.InstantTaskExecutorRule
-import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.google.firebase.FirebaseApp
+import com.udacity.project4.BaseTest
 import com.udacity.project4.MainCoroutineRule
 import com.udacity.project4.locationreminders.data.FakeDataSource
-import com.udacity.project4.locationreminders.getOrAwaitValue
+import com.udacity.project4.locationreminders.data.ReminderDataSource
+import com.udacity.project4.getOrAwaitValue
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.test.pauseDispatcher
-import kotlinx.coroutines.test.resumeDispatcher
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runBlockingTest
-import kotlinx.coroutines.test.runTest
-import org.hamcrest.CoreMatchers
-import org.hamcrest.MatcherAssert
 import org.hamcrest.MatcherAssert.assertThat
-import org.hamcrest.Matchers.`is`
+import org.hamcrest.Matchers.notNullValue
+import org.hamcrest.Matchers.nullValue
 import org.hamcrest.core.Is
-import org.junit.After
-import org.junit.Assert
-import org.junit.Before
+import org.hamcrest.core.IsNot.not
+import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.koin.core.context.stopKoin
 import org.robolectric.annotation.Config
+import org.koin.core.component.inject
 
 @RunWith(AndroidJUnit4::class)
-@OptIn(ExperimentalCoroutinesApi::class)
-@Config(sdk = [Build.VERSION_CODES.O_MR1])
-class RemindersListViewModelTest {
-
-    private lateinit var reminderListViewModel: RemindersListViewModel
+@ExperimentalCoroutinesApi
+@Config(sdk = [Build.VERSION_CODES.O])
+class RemindersListViewModelTest : BaseTest {
 
     @get:Rule
-    var instantTaskExecutorRule = InstantTaskExecutorRule()
+    var instantExecutorRule = InstantTaskExecutorRule()
 
-    // Use the updated MainCoroutineRule
+    private val remindersViewModel: RemindersListViewModel by inject()
+
+    private val dataSource: ReminderDataSource by inject()
+
     @get:Rule
     var mainCoroutineRule = MainCoroutineRule()
 
-    @Before
-    fun setupViewModel() {
-        val fakeDataSource = FakeDataSource()
-        FirebaseApp.initializeApp(ApplicationProvider.getApplicationContext())
-        reminderListViewModel = RemindersListViewModel(
-            ApplicationProvider.getApplicationContext(),
-            fakeDataSource
-        )
-    }
+    @Test
+    fun loadReminders_loading() {
+        runBlocking {
+            // mainCoroutineRule.pauseDispatcher()
+            mainCoroutineRule.dispatcher.scheduler.advanceUntilIdle()
 
-    @After
-    fun tearDown() {
-        stopKoin()
+            remindersViewModel.loadReminders()
+            assertThat(remindersViewModel.showLoading.getOrAwaitValue(), Is.`is`(true))
+            // mainCoroutineRule.resumeDispatcher()
+
+            mainCoroutineRule.dispatcher.scheduler.runCurrent()
+            assertThat(remindersViewModel.showLoading.getOrAwaitValue(), Is.`is`(false))
+        }
     }
 
     @Test
-    fun invalidateShowNoData_noDataAvailable() {
-        reminderListViewModel.remindersList.value = null
-        val value = reminderListViewModel.showNoData.value
-
-        MatcherAssert.assertThat(value, Is.`is`(CoreMatchers.nullValue()))
+    fun loadReminders_successList() {
+        assertThat(remindersViewModel.remindersList.value, Is.`is`(nullValue()))
+        remindersViewModel.loadReminders()
+        assertThat(remindersViewModel.remindersList.value, Is.`is`(notNullValue()))
     }
 
     @Test
-    fun checkShowLoading() = runTest {
-        // Pause the dispatcher
-        mainCoroutineRule.dispatcher.scheduler.advanceUntilIdle()
-
-        // Trigger loading
-        reminderListViewModel.loadReminders()
-
-        // Assert that loading is shown
-        MatcherAssert.assertThat(
-            reminderListViewModel.showLoading.getOrAwaitValue(),
-            Is.`is`(true)
-        )
-
-        // Process the queued tasks
-        mainCoroutineRule.dispatcher.scheduler.runCurrent()
-
-        // Assert that loading is hidden
-        MatcherAssert.assertThat(
-            reminderListViewModel.showLoading.getOrAwaitValue(),
-            Is.`is`(false)
-        )
+    fun loadReminders_successValues() {
+        runBlocking {
+            dataSource.saveReminder(FakeDataSource.MOCK_REMINDER_DTO)
+        }
+        assertThat(remindersViewModel.remindersList.value, Is.`is`(nullValue()))
+        remindersViewModel.loadReminders()
+        val reminders = listOf(FakeDataSource.MOCK_REMINDER_DTO)
+        val dataList = ArrayList<ReminderDataItem>()
+        dataList.addAll(reminders.map { reminder ->
+            ReminderDataItem(
+                reminder.title,
+                reminder.description,
+                reminder.location,
+                reminder.latitude,
+                reminder.longitude,
+                reminder.id,
+                reminder.deleteFlag,
+                reminder.requestCode
+            )
+        })
+        assertEquals(remindersViewModel.remindersList.value, dataList)
     }
 
+    @Test
+    fun loadReminders_error() {
+        (dataSource as? FakeDataSource)?.shouldReturnError = true
+
+        assertThat(remindersViewModel.showSnackBar.value, Is.`is`(nullValue()))
+        remindersViewModel.loadReminders()
+        assertThat(remindersViewModel.showSnackBar.value, not(Is.`is`(nullValue())))
+    }
+
+    @Test
+    fun invalidateShowNoData_noData() {
+        (dataSource as? FakeDataSource)?.shouldReturnError = true
+        remindersViewModel.loadReminders()
+        assertThat(remindersViewModel.showNoData.value, Is.`is`(true))
+    }
+
+    @Test
+    fun invalidateShowNoData_hasData() {
+        runBlocking {
+            dataSource.saveReminder(FakeDataSource.MOCK_REMINDER_DTO)
+        }
+        remindersViewModel.loadReminders()
+        assertThat(remindersViewModel.showNoData.value, Is.`is`(false))
+    }
 }
 

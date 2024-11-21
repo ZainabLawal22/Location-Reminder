@@ -12,6 +12,7 @@ import androidx.lifecycle.Observer
 import com.firebase.ui.auth.AuthUI
 import com.firebase.ui.auth.ErrorCodes
 import com.firebase.ui.auth.IdpResponse
+import com.google.android.material.snackbar.Snackbar
 import com.google.firebase.auth.FirebaseAuth
 import com.udacity.project4.R
 import com.udacity.project4.databinding.ActivityAuthenticationBinding
@@ -62,9 +63,20 @@ class AuthenticationActivity : AppCompatActivity() {
                 }
                 if (response.error?.errorCode == ErrorCodes.NO_NETWORK) {
                     Log.i("onActivityResult", "No Network")
-                    // You can show a toast or dialog here to inform the user
+                    Snackbar.make(
+                        binding.root,
+                        getString(R.string.no_network),
+                        Snackbar.LENGTH_SHORT
+                    ).show()
+
+
                 } else {
-                    Log.i("onActivityResult", "Sign-in Error: ${response?.error?.message}")
+                    Log.i("onActivityResult", "Sign-in Error: ${response.error?.message}")
+                    Snackbar.make(binding.root, R.string.error_happened, Snackbar.LENGTH_LONG)
+                        .setAction(R.string.retry) {
+                            launchSignInFlow()
+                        }.show()
+
                 }
             }
         }

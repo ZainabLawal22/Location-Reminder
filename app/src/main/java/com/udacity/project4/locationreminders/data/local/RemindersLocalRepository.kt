@@ -66,4 +66,26 @@ class RemindersLocalRepository(
             remindersDao.deleteAllReminders()
         }
     }
+
+
+    /**
+     * Deletes the reminders by id in the db
+     */
+    override suspend fun deleteReminders(id: String) {
+        withContext(ioDispatcher) {
+            remindersDao.deleteReminders(listOf(id))
+        }
+    }
+
+
+    /**
+     * gets the reminders last request code in the db
+     */
+    override suspend fun getLastRequestCode(): Result<Int> = withContext(ioDispatcher) {
+        return@withContext try {
+            Result.Success(remindersDao.getLastRequestCode() ?: 0)
+        } catch (ex: Exception) {
+            Result.Error(ex.localizedMessage)
+        }
+    }
 }

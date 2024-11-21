@@ -1,14 +1,18 @@
 package com.udacity.project4.locationreminders.savereminder
 
 import android.app.Application
+import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.map
 import androidx.lifecycle.viewModelScope
+import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.PointOfInterest
 import com.udacity.project4.R
 import com.udacity.project4.base.BaseViewModel
 import com.udacity.project4.base.NavigationCommand
 import com.udacity.project4.locationreminders.data.ReminderDataSource
 import com.udacity.project4.locationreminders.data.dto.ReminderDTO
+import com.udacity.project4.locationreminders.data.dto.Result
 import com.udacity.project4.locationreminders.reminderslist.ReminderDataItem
 import kotlinx.coroutines.launch
 
@@ -18,8 +22,14 @@ class SaveReminderViewModel(val app: Application, val dataSource: ReminderDataSo
     val reminderDescription = MutableLiveData<String?>()
     val reminderSelectedLocationStr = MutableLiveData<String?>()
     val selectedPOI = MutableLiveData<PointOfInterest?>()
-    val latitude = MutableLiveData<Double?>()
-    val longitude = MutableLiveData<Double?>()
+//    val latitude = MutableLiveData<Double?>()
+//    val longitude = MutableLiveData<Double?>()
+    val latLong = MutableLiveData<LatLng?>()
+
+    val saveButtonEnabled: LiveData<Boolean> = latLong.map { it != null }
+
+    var requestCode: Int = 0
+
 
     /**
      * Clear the live data objects to start fresh next time the view model gets called
@@ -29,21 +39,33 @@ class SaveReminderViewModel(val app: Application, val dataSource: ReminderDataSo
         reminderDescription.value = null
         reminderSelectedLocationStr.value = null
         selectedPOI.value = null
-        latitude.value = null
-        longitude.value = null
+        latLong.value = null
     }
 
+    /**
+     * Fetches the last request code from the data source and increments it by 1.
+     * If no previous request code is found, it initializes the request code to 1.
+     */
+    fun fetchRequestCode() {
+        viewModelScope.launch {
+            val result = dataSource.getLastRequestCode()
+            requestCode = when (result) {
+                is Result.Success -> {
+                    result.data + 1
+                }
+                else -> 1
+            }
+        }
+    }
 
 
     /**
      * Validate the entered data then saves the reminder data to the DataSource
      */
-    fun validateAndSaveReminder(reminderData: ReminderDataItem): Boolean {
-        val result = validateEnteredData(reminderData)
+    fun validateAndSaveReminder(reminderData: ReminderDataItem) {
         if (validateEnteredData(reminderData)) {
             saveReminder(reminderData)
         }
-        return result
     }
 
 
@@ -61,7 +83,9 @@ class SaveReminderViewModel(val app: Application, val dataSource: ReminderDataSo
                     reminderData.location,
                     reminderData.latitude,
                     reminderData.longitude,
-                    reminderData.id
+                    reminderData.id,
+                    reminderData.deleteFlag,
+                    reminderData.requestCode
                 )
             )
             showLoading.value = false

@@ -40,6 +40,14 @@
     <string name="geofence_too_many_geofences">Your app has registered too many geofences.</string>
     <string name="geofence_too_many_pending_intents">You have provided too many PendingIntents to the addGeofences() call.</string>
     <string name="error_adding_geofence">Error Happened, Failed to add Geofence</string>
+    <string name="no_network">No Network</string>
+    <string name="delete">Delete</string>
+    <string name="okay">Okay</string>
+    <string name="choose_a_location">Choose a location</string>
+    <string name="choose_location_text">Choose %s?</string>
+    <string name="select_button">Select</string>
+    <string name="cancel_button">Cancel</string>
+    <string name="selection_cancelled">Selected Location cancelled</string>
 
 
 </resources>
