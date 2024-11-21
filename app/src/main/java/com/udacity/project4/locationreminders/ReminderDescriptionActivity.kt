@@ -57,12 +57,13 @@ class ReminderDescriptionActivity : AppCompatActivity() {
             this,
             R.layout.activity_reminder_description
         )
-        if (intent.hasExtra(EXTRA_ReminderDataItem)) {
-            val reminderDataItem:ReminderDataItem = intent.getSerializableExtra(
-                EXTRA_ReminderDataItem) as ReminderDataItem
-            binding.reminderDataItem = reminderDataItem
-            binding.executePendingBindings()
-        }
+//        if (intent.hasExtra(EXTRA_ReminderDataItem)) {
+//            val reminderDataItem:ReminderDataItem = intent.getSerializableExtra(
+//                EXTRA_ReminderDataItem) as ReminderDataItem
+//            binding.reminderDataItem = reminderDataItem
+//            binding.executePendingBindings()
+//        }
+        item = intent.extras?.getSerializable(EXTRA_ReminderDataItem) as ReminderDataItem
 
         geofencingClient = LocationServices.getGeofencingClient(this)
 
